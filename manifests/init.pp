@@ -55,55 +55,51 @@ class tclient
     include ::openvpn::buildenv
     include ::tclient::prequisites
 
-    $file_defaults = {
-        'ensure'  => 'present',
-        'owner'   => $::os::params::adminuser,
-        'group'   => $::os::params::admingroup,
-    }
-
     file { '/home/buildbot':
-        ensure  => directory,
-        mode    => '0755',
-        require => undef,
-        *       => $file_defaults,
+        ensure => directory,
+        owner  => $::os::params::adminuser,
+        group  => $::os::params::admingroup,
+        mode   => '0755',
     }
 
     if $manage_tclient_rc {
+
+        $file_defaults = {
+            'ensure'  => 'present',
+            'owner'   => $::os::params::adminuser,
+            'group'   => $::os::params::admingroup,
+            'require' => File['/home/buildbot'],
+        }
 
         file { 'tclient-t_client.rc':
             name    => '/home/buildbot/t_client.rc',
             content => template('tclient/t_client.rc.erb'),
             mode    => '0644',
-            require => File['/home/buildbot'],
             *       => $file_defaults,
         }
         file { "tclient-${::fqdn}.crt":
-            name    => '/home/buildbot/test-client.crt',
-            source  => "puppet:///files/tclient-${::fqdn}.crt",
-            mode    => '0644',
-            require => File['/home/buildbot'],
-            *       => $file_defaults,
+            name   => '/home/buildbot/test-client.crt',
+            source => "puppet:///files/tclient-${::fqdn}.crt",
+            mode   => '0644',
+            *      => $file_defaults,
         }
         file { "tclient-${::fqdn}.key":
-            name    => '/home/buildbot/test-client.key',
-            source  => "puppet:///files/tclient-${::fqdn}.key",
-            mode    => '0600',
-            require => File['/home/buildbot'],
-            *       => $file_defaults,
+            name   => '/home/buildbot/test-client.key',
+            source => "puppet:///files/tclient-${::fqdn}.key",
+            mode   => '0600',
+            *      => $file_defaults,
         }
         file { 'tclient-ca.crt':
-            name    => '/home/buildbot/test-ca.crt',
-            source  => 'puppet:///files/tclient-ca.crt',
-            mode    => '0644',
-            require => File['/home/buildbot'],
-            *       => $file_defaults,
+            name   => '/home/buildbot/test-ca.crt',
+            source => 'puppet:///files/tclient-ca.crt',
+            mode   => '0644',
+            *      => $file_defaults,
         }
         file { 'tclient-ta.key':
-            name    => '/home/buildbot/test-ta.key',
-            source  => 'puppet:///files/tclient-ta.key',
-            mode    => '0644',
-            require => File['/home/buildbot'],
-            *       => $file_defaults,
+            name   => '/home/buildbot/test-ta.key',
+            source => 'puppet:///files/tclient-ta.key',
+            mode   => '0644',
+            *      => $file_defaults,
         }
     }
 
