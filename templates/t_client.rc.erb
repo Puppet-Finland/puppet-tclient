@@ -1,0 +1,208 @@
+#
+# this is sourced from t_client.sh and defines which openvpn client tests
+# to run
+#
+#
+# define these - if empty, no tests will run
+#
+if [ -z "$KEYBASE" ] ; then
+    KEYBASE="/home/buildbot"
+fi
+
+CA_CERT="$KEYBASE/test-ca.crt"
+CLIENT_KEY="$KEYBASE/test-client.key"
+CLIENT_CERT="$KEYBASE/test-client.crt"
+
+# Load EXPECT_IFCONFIG* parameters from cache
+if [ -r "${top_builddir}/t_client_ips.rc" ]; then
+    . "${top_builddir}/t_client_ips.rc"
+else
+    echo "NOTICE: missing t_client_ips.rc will be auto-generated"
+fi
+
+#RUN_SUDO=sudo
+
+#
+# default time for OpenVPN startup is 10 seconds, increase for faraway server
+SETUP_TIME_WAIT=<%= @setup_time_wait %>
+
+#
+# remote host (used as macro below)
+#
+REMOTE=<%= @public_test_server %>
+REMOTE4=<%= @public_test_server %>
+#
+# tests to run (list suffixes for config stanzas below)
+#
+TEST_RUN_LIST="<%= @test_run_list %>"
+
+#
+# base confic that is the same for all the p2mp test runs
+#
+OPENVPN_BASE_P2MP="--client --ca $CA_CERT \
+	--cert $CLIENT_CERT --key $CLIENT_KEY \
+	--ns-cert-type server --nobind --comp-lzo --verb 3"
+
+# base config for p2p tests
+#
+OPENVPN_BASE_P2P="..."
+
+#
+#
+# now define the individual tests - all variables suffixed with _1, _2 etc
+# will be used in test run "1", "2", etc.
+# 
+# if something is not defined here, the "generic" variable without 
+# suffix will be used
+#
+# Test 1: TCP / p2mp tun
+#
+RUN_TITLE_1="tcp / p2pm / top net30"
+OPENVPN_CONF_1="$OPENVPN_BASE_P2MP --dev tun --proto tcp4 --remote $REMOTE --port 51194"
+PING4_HOSTS_1="<%= @ping4_hosts_1 %>"
+PING6_HOSTS_1="<%= @ping6_hosts_1 %>"
+
+#
+# Test 1a: TCP / IPv6 / p2mp tun
+# 
+# with --server-poll-timeout, just to ensure it is still allowed in TLS mode
+
+RUN_TITLE_1a="tcp*6* / p2pm / top net30"
+OPENVPN_CONF_1a="$OPENVPN_BASE_P2MP --dev tun3 --proto tcp6-client --remote $REMOTE --port 51194 --server-poll-timeout 10" # --ifconfig-noexec
+PING4_HOSTS_1a="$PING4_HOSTS_1"
+PING6_HOSTS_1a="$PING6_HOSTS_1"
+
+#
+# Test 1b: TCP p2mp tun, IPv4 HTTP proxy
+#
+
+RUN_TITLE_1b="tcp4 / http proxy / p2pm / top net30"
+OPENVPN_CONF_1b="$OPENVPN_BASE_P2MP --dev tun3 --proto tcp-client --remote $REMOTE --port 51194 --http-proxy <%= @ipv4_http_proxy %> 3128"
+PING4_HOSTS_1b="$PING4_HOSTS_1"
+PING6_HOSTS_1b="$PING6_HOSTS_1"
+
+#
+# Test 1c: TCP p2mp tun, IPv6 HTTP proxy
+#
+
+RUN_TITLE_1c="tcp6 / http proxy / p2pm / top net30"
+OPENVPN_CONF_1c="$OPENVPN_BASE_P2MP --dev tun3 --proto tcp6-client --remote $REMOTE --port 51194 --http-proxy <%= @ipv6_http_proxy %> 3128"
+PING4_HOSTS_1c="$PING4_HOSTS_1"
+PING6_HOSTS_1c="$PING6_HOSTS_1"
+
+#
+# Test 1d: TCP p2mp tun, IPv4 SOCKS proxy
+#
+
+RUN_TITLE_1d="tcp4 / socks proxy / p2pm / top net30"
+OPENVPN_CONF_1d="$OPENVPN_BASE_P2MP --dev tun3 --proto tcp4-client --remote $REMOTE --port 51194 --socks-proxy <%= @ipv4_socks_proxy %> 1080"
+PING4_HOSTS_1d="$PING4_HOSTS_1"
+PING6_HOSTS_1d="$PING6_HOSTS_1"
+
+#
+# Test 1e: TCP p2mp tun, IPv6 SOCKS proxy (localhost, ssh -D 2222)
+#
+
+RUN_TITLE_1e="tcp6 / socks proxy / p2pm / top net30 [needs ssh -D 2222]"
+OPENVPN_CONF_1e="$OPENVPN_BASE_P2MP --dev tun3 --proto tcp6-client --remote $REMOTE --port 51194 --socks-proxy <%= @ipv6_socks_proxy %> 2222"
+PING4_HOSTS_1e="$PING4_HOSTS_1"
+PING6_HOSTS_1e="$PING6_HOSTS_1"
+
+#
+# Test 2: UDP / p2mp tun
+#   specify IPv4+IPv6 addresses expected from server and ping targets
+#
+RUN_TITLE_2="udp / p2pm / top net30"
+OPENVPN_CONF_2="$OPENVPN_BASE_P2MP --dev tun --proto udp4 --remote $REMOTE --port 51194"
+PING4_HOSTS_2="<%= @ping4_hosts_2 %>"
+PING6_HOSTS_2="<%= @ping6_hosts_2 %>"
+
+# Test 2a: UDP / p2mp tun, no v4-routes
+# (regression in svn-merger, crash if "IPv4 struct route_list * rl" is NULL)
+# same server used as for "test 2", but different client option
+#
+# + mtu-disc yes to test for "nobind" socket errors
+
+RUN_TITLE_2a="udp / p2pm / v6-only / --multihome"
+OPENVPN_CONF_2a="$OPENVPN_BASE_P2MP --dev tun --proto udp4 --remote $REMOTE --port 51194 --route-nopull --route-ipv6 fd00:abcd:194::/48 --mtu-disc yes --multihome"
+PING6_HOSTS_2a="fd00:abcd:194:2::1 fd00:abcd:194:0::1"
+
+# Test 2b: UDP*6* / p2mp tun
+#
+RUN_TITLE_2b="udp *6* / p2pm / top net30"
+OPENVPN_CONF_2b="$OPENVPN_BASE_P2MP --dev tun --proto udp6 --remote $REMOTE --port 51194"
+PING4_HOSTS_2b="$PING4_HOSTS_2"
+PING6_HOSTS_2b="$PING6_HOSTS_2"
+
+# Test 2c: UDP*6* / p2mp tun / --multihome
+#
+RUN_TITLE_2c="udp *6* / p2pm / top net30"
+OPENVPN_CONF_2c="$OPENVPN_BASE_P2MP --dev tun --proto udp6 --remote $REMOTE --port 51194 --multihome"
+PING4_HOSTS_2c="$PING4_HOSTS_2"
+PING6_HOSTS_2c="$PING6_HOSTS_2"
+
+#
+# Test 2d: UDP p2mp tun, IPv4 SOCKS proxy
+#
+
+RUN_TITLE_2d="UDP4 / socks proxy [on TCP!] / p2pm / top net30"
+OPENVPN_CONF_2d="$OPENVPN_BASE_P2MP --dev tun --proto udp4 --remote $REMOTE --port 51194 --socks-proxy <%= @ipv4_socks_proxy %> 1080"
+PING4_HOSTS_2d="$PING4_HOSTS_2"
+PING6_HOSTS_2d="$PING6_HOSTS_2"
+
+# Test 3: UDP / p2mp tun, topology subnet
+#
+RUN_TITLE_3="udp / p2pm / top subnet"
+OPENVPN_CONF_3="$OPENVPN_BASE_P2MP --dev tun --proto udp4 --remote $REMOTE --port 51195"
+PING4_HOSTS_3="<%= @ping4_hosts_3 %>"
+PING6_HOSTS_3="<%= @ping6_hosts_3 %>"
+
+# Test 4: UDP / p2mp tap
+#
+RUN_TITLE_4="udp(4) / p2pm / tap"
+OPENVPN_CONF_4="$OPENVPN_BASE_P2MP --dev tap --proto udp4 --remote $REMOTE --port 51196 --route-ipv6 fd00:abcd:195::/48 fd00:abcd:194:4::ffff"
+PING4_HOSTS_4="<%= @ping4_hosts_4 %>"
+PING6_HOSTS_4="<%= @ping6_hosts_4 %>"
+
+# Test 4a: UDP / p2mp tap3
+# 
+RUN_TITLE_4a="udp(6) / p2pm / tap3"
+OPENVPN_CONF_4a="$OPENVPN_BASE_P2MP --dev tap3 --proto udp6 --remote $REMOTE --port 51196"
+PING4_HOSTS_4a="$PING4_HOSTS_4"
+PING6_HOSTS_4a="$PING6_HOSTS_4"
+
+# Test 5: UDP / p2mp tun, top net30, ipv6 /112
+RUN_TITLE_5="udp / p2pm / top net30 / ipv6 112"
+OPENVPN_CONF_5="$OPENVPN_BASE_P2MP --dev tun --proto udp4 --remote $REMOTE --port 51197"
+PING4_HOSTS_5="<%= @ping4_hosts_5 %>"
+PING6_HOSTS_5="<%= @ping6_hosts_5 %>"
+
+# Test 6: UDP / p2mp tun, top subnet, --fragment 500
+RUN_TITLE_6="udp / p2pm / top subnet / --fragment 500"
+OPENVPN_CONF_6="$OPENVPN_BASE_P2MP --dev tun --proto udp --remote $REMOTE --port 51198 --fragment 500"
+PING4_HOSTS_6="<%= @ping4_hosts_6 %>"
+PING6_HOSTS_6="<%= @ping6_hosts_6 %>"
+
+# Test ...: UDP / p2mp tap
+#
+
+# Test ...: TCP / p2mp tun
+#
+
+# Test ...: UDP / p2p tap
+#
+
+# Test ...: TCP / p2p tap
+#
+#
+# Test 8: UDP / p2p tun
+RUN_TITLE_8="udp / p2p tun"
+OPENVPN_CONF_8="--dev tun --proto udp4 --remote gentoo.ov.greenie.net 51198 --nobind --secret $KEYBASE/p2p-gentoo.key --ifconfig 10.194.6.2 10.194.6.1 --comp-lzo --tun-ipv6 --ifconfig-ipv6 fd00:abcd:194:6::2/64 fd00:abcd:194:6::1 --route 10.194.0.0 255.255.0.0 --route-ipv6 fd00:abcd:194::/48 --verb 3"
+PING4_HOSTS_8=""
+PING6_HOSTS_8=""
+
+# Test 9: tcp / p2p tap / --tls-server
+RUN_TITLE_9="udp / p2p tap / --tls-server --inetd on remote"
+OPENVPN_CONF_9="$OPENVPN_BASE_P2MP --dev tap --proto tcp --remote gentoo.ov.greenie.net 51199 --ifconfig 10.194.8.2 255.255.255.0 --comp-lzo --tun-ipv6 --ifconfig-ipv6 fd00:abcd:194:8::2/64 fd00:abcd:194:8::1"
+PING4_HOSTS_9=""
+PING6_HOSTS_9=""

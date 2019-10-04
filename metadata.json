@@ -1,0 +1,19 @@
+{
+  "name": "puppetfinland-tclient",
+  "version": "1.0.0",
+  "author": "Puppet-Finland team",
+  "summary": "Configure OpenVPN 2 t_client.sh tests",
+  "license": "BSD-2-Clause",
+  "source": "https://github.com/Puppet-Finland/puppet-tclient.git",
+  "project_page": "https://github.com/Puppet-Finland/puppet-tclient",
+  "dependencies": [
+    {
+      "name": "puppetfinland/openvpn",
+      "version_requirement": ">= 3.3.1"
+    },
+    {
+      "name": "puppetfinland/os",
+      "version_requirement": ">= 0.5.5"
+    }
+  ]
+}
